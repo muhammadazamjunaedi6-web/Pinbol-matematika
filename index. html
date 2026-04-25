@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Fruit Catch - GitHub Project</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #2c3e50; font-family: sans-serif; }
+        canvas { display: block; background: #ecf0f1; margin: auto; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; pointer-events: none; }
+        #math-overlay {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 20px; border-radius: 10px; text-align: center;
+            display: none; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        input { font-size: 20px; width: 60px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h1>Skor: <span id="score">0</span></h1>
+</div>
+
+<div id="math-overlay">
+    <h2>Selesaikan Soal!</h2>
+    <p id="question" style="font-size: 24px; font-weight: bold;"></p>
+    <input type="number" id="answer" autofocus>
+    <button onclick="checkAnswer()">Jawab</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const mathOverlay = document.getElementById('math-overlay');
+const questionEl = document.getElementById('question');
+const answerInput = document.getElementById('answer');
+
+canvas.width = 400;
+canvas.height = 600;
+
+let score = 0;
+let fruits = [];
+let gameActive = true;
+let currentCorrectAnswer = 0;
+
+// Objek Papan (Paddle)
+const paddle = {
+    w: 80,
+    h: 15,
+    x: canvas.width / 2 - 40,
+    y: canvas.height - 30,
+    speed: 7
+};
+
+// Logika Gerakan Mouse/Touch
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    paddle.x = e.clientX - rect.left - paddle.w / 2;
+});
+
+function spawnFruit() {
+    if (!gameActive) return;
+    const value = Math.floor(Math.random() * 10) + 1;
+    fruits.push({
+        x: Math.random() * (canvas.width - 20),
+        y: -20,
+        r: 15,
+        val: value,
+        speed: 2 + Math.random() * 2
+    });
+}
+
+function triggerMathProblem() {
+    gameActive = false;
+    const n1 = Math.floor(Math.random() * 10) + 1;
+    const n2 = Math.floor(Math.random() * 10) + 1;
+    currentCorrectAnswer = n1 + n2;
+    
+    questionEl.innerText = `${n1} + ${n2} = ?`;
+    mathOverlay.style.display = 'block';
+    answerInput.value = '';
+    answerInput.focus();
+}
+
+function checkAnswer() {
+    const userAnswer = parseInt(answerInput.value);
+    if (userAnswer === currentCorrectAnswer) {
+        alert("Benar! +2 Skor Bonus");
+        score += 2;
+    } else {
+        alert("Salah! Skor -5");
+        score -= 5;
+    }
+    
+    scoreEl.innerText = score;
+    mathOverlay.style.display = 'none';
+    gameActive = true;
+    update();
+}
+
+function update() {
+    if (!gameActive) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Gambar Papan
+    ctx.fillStyle = '#3498db';
+    ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+
+    // Update Buah
+    for (let i = fruits.length - 1; i >= 0; i--) {
+        let f = fruits[i];
+        f.y += f.speed;
+
+        // Gambar Buah
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fillStyle = '#e74c3c';
+        ctx.fill();
+        ctx.closePath();
+
+        // Teks Angka di Buah
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.fillText(f.val, f.x - 4, f.y + 4);
+
+        // Cek Tabrakan
+        if (f.y + f.r > paddle.y && f.x > paddle.x && f.x < paddle.x + paddle.w) {
+            score += 1;
+            scoreEl.innerText = score;
+            fruits.splice(i, 1);
+            
+            // Trigger soal setiap kelipatan 10
+            if (score > 0 && score % 10 === 0) {
+                triggerMathProblem();
+                return;
+            }
+        }
+
+        // Hapus jika jatuh ke bawah
+        if (f.y > canvas.height) fruits.splice(i, 1);
+    }
+
+    requestAnimationFrame(update);
+}
+
+// Spawn buah setiap 1.5 detik
+setInterval(spawnFruit, 1500);
+update();
+
+</script>
+</body>
+</html>
